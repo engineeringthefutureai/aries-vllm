@@ -72,6 +72,7 @@ args=(
 [[ -n "${SPECULATIVE_CONFIG:-}" ]]  && args+=(--speculative-config "$SPECULATIVE_CONFIG")
 [[ -n "${REASONING_PARSER:-}" ]]    && args+=(--reasoning-parser "$REASONING_PARSER")
 [[ -n "${TOOL_CALL_PARSER:-}" ]]    && args+=(--enable-auto-tool-choice --tool-call-parser "$TOOL_CALL_PARSER")
+[[ -n "${GENERATION_CONFIG:-}" ]]   && args+=(--override-generation-config "$GENERATION_CONFIG")
 case "${PREFIX_CACHING:-}" in
   1) args+=(--enable-prefix-caching) ;;
   0) args+=(--no-enable-prefix-caching) ;;

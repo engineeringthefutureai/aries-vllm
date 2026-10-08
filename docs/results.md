@@ -64,6 +64,7 @@ MTP 2, prefix caching, 262K context, 2048 batched tokens). KV pool 586,889 token
 | All-reduce | Config change | Cold prefill @0 / 8K / 26K | Decode @0 / 8K / 26K | Smoke: decode / prefill @15K / cached return | Notes |
 |---|---|---|---|---|---|
 | chunked | — | **3372 / 3488 / 3333** | **63.8 / 70.4 / 70.1** | 79–81 / 2729 / 0.63 s | output read: clean (IPv4 validator with tests). MTP acceptance ~94% (2.88 tokens/step) |
+| chunked | `GENERATION_CONFIG={"temperature":1.0,"top_k":20,"top_p":0.95}` (checkpoint ships no generation config) | — | — | — | 2500-word story, bare request (thinking on): repetition loops in 3 of 3 seeds ("The light was the light." ×865). Same + client `presence_penalty` 1.5 (Qwen's recommendation): 3 of 3 clean. Thinking off at vLLM defaults: 2 of 2 clean |
 
 ## Model comparison (TP=2, best config each, tok/s)
 

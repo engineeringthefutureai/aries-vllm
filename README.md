@@ -134,6 +134,7 @@ editing presets. Optional knobs that are unset aren't passed, so vLLM's defaults
 | `MEM_LIMIT` | `20g` | Container RAM cap (compose) |
 | `TP_SIZE` | `2` | Tensor-parallel size |
 | `ENFORCE_EAGER` | `1` | `0` allows graph capture. Also set `VLLM_XPU_ENABLE_XPU_GRAPH=1`. Unsafe for hybrid models |
+| `GENERATION_CONFIG` | — | Server-side sampling defaults as JSON (`--override-generation-config`), merged over the checkpoint's `generation_config.json`; requests can still override |
 | `VLLM_EXTRA_ARGS` | — | Extra `vllm serve` flags, space-separated, no quoting |
 
 Arguments after the image name in `docker run` are appended to `vllm serve` too.
