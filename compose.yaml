@@ -1,0 +1,36 @@
+# docker compose up -d vllm   (or `make up`). Settings: .env, plus the preset it names
+# (MODEL_PRESET); .env values win over the preset.
+# Only one server can own both GPUs and the port; stop other inference servers first.
+services:
+  vllm:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        # versions come from VERSION + the Makefile pin: build with `make build`
+        BASE_IMAGE: ${BASE_IMAGE:-}
+        LLM_SCALER_DIGEST: ${LLM_SCALER_DIGEST:-}
+        ARIES_VLLM_VERSION: ${ARIES_VLLM_VERSION:-dev}
+        SOURCE_URL: ${SOURCE_URL:-https://github.com/engineeringthefutureai/aries-vllm}
+    image: ${ARIES_VLLM_IMAGE:-engineeringthefuture/aries-vllm}:${ARIES_VLLM_TAG:-latest}
+    container_name: aries-vllm
+    env_file: .env
+    privileged: true                 # used in every validated run; running without it is untested
+    network_mode: host               # binds HOST:PORT on the host (default 127.0.0.1:8080)
+    ipc: host                        # oneCCL IPC between TP workers
+    shm_size: 16g                    # limit, not an allocation
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - /dev/dri/by-path:/dev/dri/by-path:ro   # GPU lookup by PCI path; missing = no GPUs found
+      - ${MODELS_DIR:?set MODELS_DIR in .env}:/models:ro
+      - ./models:/opt/aries-vllm/models:ro          # local preset edits apply without a rebuild
+    mem_limit: ${MEM_LIMIT:-20g}     # TP worker RSS can grow (llm-scaler #742); caps only this container
+    restart: "no"                    # start explicitly; GPUs and port are exclusive
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import os,urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\",\"8080\")}/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 300s
+      retries: 3

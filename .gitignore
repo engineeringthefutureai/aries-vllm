@@ -1,0 +1,5 @@
+.env
+*.log
+results/
+__pycache__/
+CLAUDE.local.md
