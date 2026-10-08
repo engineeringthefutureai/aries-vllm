@@ -27,14 +27,19 @@ re-prefill: ~41 s.
 ## Gemma 4 26B A4B FP8, TP=2
 
 Preset `models/gemma-4-26b-a4b.env` (RedHatAI FP8-dynamic checkpoint, 262K context, prefix caching,
-no speculative decoding, 2048 batched tokens). MoE runs on vLLM's **Triton** FP8 kernels (the XPU
-FP8 MoE kernels don't take per-channel scales; no tuned MoE config for this GPU), attention on
-Triton (XPU Flash Attention doesn't support Gemma's prefix-LM attention). Weights 12.6 GiB/card,
-KV pool 651K tokens.
+no speculative decoding, 2048 batched tokens). With the FP8 checkpoint, MoE runs on vLLM's
+**Triton** FP8 kernels (the XPU FP8 MoE kernels don't take per-channel scales; no tuned MoE config
+for this GPU); weights 12.6 GiB/card, KV pool 651K tokens. Attention runs on Triton in every row
+(XPU Flash Attention doesn't support Gemma's prefix-LM attention). Each row below changes one
+thing from the first.
 
 | All-reduce | Config change | Cold prefill @0 / 8K / 26K | Decode @0 / 8K / 26K | Smoke: decode / prefill @17K / cached return | Notes |
 |---|---|---|---|---|---|
 | chunked | — | 643 / 420 / 231 | 27.0 / 25.9 / 20.8 | 26.8 / 324 / 0.25–0.96 s | output read: clean; prefill falls with depth (attention, likely the Triton fallback) |
+| chunked | `ENFORCE_EAGER=0` + `VLLM_XPU_ENABLE_XPU_GRAPH=1` | — | — | — | **start-up crash** in graph capture: compiled Gemma 4 code calls `.item()` (`wait method cannot be used for an event associated with a command graph`) |
+| chunked | `ENFORCE_EAGER=0` (torch.compile, no graph) | — | — | 22.8 / 319 / 0.27 s | **garbage output** (word salad, decode runs stop at 10–67 tokens). Compiler warns that vLLM's all-reduce output aliases its input. Not usable |
+| chunked | + `gemma-4-26B-A4B-it-assistant` drafter, 2 tokens | 613 / 382 / 202 | 26.7 / **14.8 / 7.3** | **48** / 290 / 1.28 s | acceptance 87% on smoke (code), 66% cumulative with bench. Big win at short context, 3x slower decode at 26K |
+| chunked | **QAT INT4 checkpoint** (`cyankiwi/gemma-4-26B-A4B-it-qat-AWQ-INT4`) | **2547 / 1271 / 529** | **26.0 / 25.9 / 25.7** | 26.2 / 864 / 0.14 s | native XPU INT4 MoE + linear kernels; 7.9 GiB weights/card, KV pool 1.08M tokens; output read: clean. Quality vs FP8 not measured |
 
 llama-benchy's "cached" rows re-prefilled here too (pp256 @ 8K ttfr 18.7 s), although this model
 isn't hybrid; the smoke cached return (same prompt resent) shows prefix caching works.
