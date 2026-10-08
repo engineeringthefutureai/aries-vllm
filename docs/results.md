@@ -47,20 +47,21 @@ isn't hybrid; the smoke cached return (same prompt resent) shows prefix caching 
 
 ## Devstral Small 2 24B FP8, TP=2
 
-Preset `models/devstral-small-2-24b.env` (Mistral's own FP8 checkpoint, dense 24B, 98K context,
+Preset `models/devstral-small-2-24b.env` (Mistral's own FP8 checkpoint, dense 24B, first row at 98K context,
 prefix caching, no speculative decoding, 2048 batched tokens). Native XPU kernels throughout:
 `XPUW8A16FP8LinearKernel`, Flash Attention. Weights 11.7 GiB/card, KV pool 122K tokens.
 
 | All-reduce | Config change | Cold prefill @0 / 8K / 26K | Decode @0 / 8K / 26K | Smoke: decode / prefill @15K / cached return | Notes |
 |---|---|---|---|---|---|
 | chunked | — | **1894 / 1945 / 1765** | 31.3 / 29.4 / 26.6 | 31.2 / 1932 / 0.13 s | output read: clean. Decode step ~32 ms, of which ~26 ms is reading 12 GiB/card (estimate): near its bandwidth ceiling |
+| chunked | 131K context: `MAX_MODEL_LEN=131072`, `GPU_MEMORY_UTIL=0.95` (needed together: 131K needs ~10 GiB KV/card) | — | — | 31.2 / 1931 / 0.13 s | KV pool 137,792 tokens (10.52 GiB/card; one full-length request at a time). 116K-token prompt with a codename in its first line: recalled exactly; cold prefill 96 s (1209 tok/s avg), cached repeat 0.72 s. 262K would need fp8 KV, and the checkpoint has no KV scales |
 
 ## Model comparison (TP=2, best config each, tok/s)
 
 | Model | Cold prefill @0 / 8K / 26K | Decode @0 / 8K / 26K | Max context | Notes |
 |---|---|---|---|---|
 | Qwen3.8-27B FP8 + MTP | 1164–1186 / 1211–1216 / 1162–1163 | 33.0–35.7 / 34.5–35.7 / 34.8–35.5 | 98K | MTP carries decode |
-| Devstral Small 2 24B FP8 | **1894 / 1945 / 1765** | 31.3 / 29.4 / 26.6 | 98K (393K native) | no speculative decoding; native kernels |
+| Devstral Small 2 24B FP8 | **1894 / 1945 / 1765** | 31.3 / 29.4 / 26.6 | 131K (393K native) | no speculative decoding; native kernels |
 | Gemma 4 26B A4B QAT INT4 | 2547 / 1271 / 529 | 26.0 / 25.9 / 25.7 | 262K | Triton attention fallback slows deep prefill |
 
 ## llama.cpp on the same hardware, for comparison
