@@ -40,10 +40,28 @@ thing from the first.
 | chunked | `ENFORCE_EAGER=0` (torch.compile, no graph) | — | — | 22.8 / 319 / 0.27 s | **garbage output** (word salad, decode runs stop at 10–67 tokens). Compiler warns that vLLM's all-reduce output aliases its input. Not usable |
 | chunked | + `gemma-4-26B-A4B-it-assistant` drafter, 2 tokens | 613 / 382 / 202 | 26.7 / **14.8 / 7.3** | **48** / 290 / 1.28 s | acceptance 87% on smoke (code), 66% cumulative with bench. Big win at short context, 3x slower decode at 26K |
 | chunked | **QAT INT4 checkpoint** (`cyankiwi/gemma-4-26B-A4B-it-qat-AWQ-INT4`) | **2547 / 1271 / 529** | **26.0 / 25.9 / 25.7** | 26.2 / 864 / 0.14 s | native XPU INT4 MoE + linear kernels; 7.9 GiB weights/card, KV pool 1.08M tokens; output read: clean. Quality vs FP8 not measured |
-| — (one card) | QAT INT4, `TP_SIZE=1`, 131K context (262K doesn't fit one card) | 2233 / 750 / 252 | **33.9 / 33.8 / 28.7** | 33.8 / 460 / 0.16 s | vs the TP=2 INT4 row: decode +30% (TP adds ~8.5 ms/token), prefill 1.1-2x slower. Still a ~30 ms/token floor on one card (weights take ~4-5 ms to read, estimate): eager per-step overhead dominates. KV pool 181K tokens |
+| — (one card) | QAT INT4, `TP_SIZE=1`, 131K context (262K doesn't fit one card) | 2233 / 750 / 252 | **33.9 / 33.8 / 28.7** | 33.8 / 460 / 0.16 s | vs the TP=2 INT4 row: decode +30% (TP adds ~8.5 ms/token), prefill 1.1-2x slower. Still a ~30 ms/token floor on one card (weights take ~4-5 ms to read, estimate): overhead in Gemma's code path (MoE routing kernels, Triton attention) dominates. Not a stack-wide floor: dense Devstral with native kernels spends only ~6 ms/token beyond its weight reads. KV pool 181K tokens |
 
 llama-benchy's "cached" rows re-prefilled here too (pp256 @ 8K ttfr 18.7 s), although this model
 isn't hybrid; the smoke cached return (same prompt resent) shows prefix caching works.
+
+## Devstral Small 2 24B FP8, TP=2
+
+Preset `models/devstral-small-2-24b.env` (Mistral's own FP8 checkpoint, dense 24B, 98K context,
+prefix caching, no speculative decoding, 2048 batched tokens). Native XPU kernels throughout:
+`XPUW8A16FP8LinearKernel`, Flash Attention. Weights 11.7 GiB/card, KV pool 122K tokens.
+
+| All-reduce | Config change | Cold prefill @0 / 8K / 26K | Decode @0 / 8K / 26K | Smoke: decode / prefill @15K / cached return | Notes |
+|---|---|---|---|---|---|
+| chunked | — | **1894 / 1945 / 1765** | 31.3 / 29.4 / 26.6 | 31.2 / 1932 / 0.13 s | output read: clean. Decode step ~32 ms, of which ~26 ms is reading 12 GiB/card (estimate): near its bandwidth ceiling |
+
+## Model comparison (TP=2, best config each, tok/s)
+
+| Model | Cold prefill @0 / 8K / 26K | Decode @0 / 8K / 26K | Max context | Notes |
+|---|---|---|---|---|
+| Qwen3.8-27B FP8 + MTP | 1164–1186 / 1211–1216 / 1162–1163 | 33.0–35.7 / 34.5–35.7 / 34.8–35.5 | 98K | MTP carries decode |
+| Devstral Small 2 24B FP8 | **1894 / 1945 / 1765** | 31.3 / 29.4 / 26.6 | 98K (393K native) | no speculative decoding; native kernels |
+| Gemma 4 26B A4B QAT INT4 | 2547 / 1271 / 529 | 26.0 / 25.9 / 25.7 | 262K | Triton attention fallback slows deep prefill |
 
 ## llama.cpp on the same hardware, for comparison
 
