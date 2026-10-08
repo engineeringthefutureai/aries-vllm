@@ -40,6 +40,7 @@ thing from the first.
 | chunked | `ENFORCE_EAGER=0` (torch.compile, no graph) | — | — | 22.8 / 319 / 0.27 s | **garbage output** (word salad, decode runs stop at 10–67 tokens). Compiler warns that vLLM's all-reduce output aliases its input. Not usable |
 | chunked | + `gemma-4-26B-A4B-it-assistant` drafter, 2 tokens | 613 / 382 / 202 | 26.7 / **14.8 / 7.3** | **48** / 290 / 1.28 s | acceptance 87% on smoke (code), 66% cumulative with bench. Big win at short context, 3x slower decode at 26K |
 | chunked | **QAT INT4 checkpoint** (`cyankiwi/gemma-4-26B-A4B-it-qat-AWQ-INT4`) | **2547 / 1271 / 529** | **26.0 / 25.9 / 25.7** | 26.2 / 864 / 0.14 s | native XPU INT4 MoE + linear kernels; 7.9 GiB weights/card, KV pool 1.08M tokens; output read: clean. Quality vs FP8 not measured |
+| — (one card) | QAT INT4, `TP_SIZE=1`, 131K context (262K doesn't fit one card) | 2233 / 750 / 252 | **33.9 / 33.8 / 28.7** | 33.8 / 460 / 0.16 s | vs the TP=2 INT4 row: decode +30% (TP adds ~8.5 ms/token), prefill 1.1-2x slower. Still a ~30 ms/token floor on one card (weights take ~4-5 ms to read, estimate): eager per-step overhead dominates. KV pool 181K tokens |
 
 llama-benchy's "cached" rows re-prefilled here too (pp256 @ 8K ttfr 18.7 s), although this model
 isn't hybrid; the smoke cached return (same prompt resent) shows prefix caching works.
