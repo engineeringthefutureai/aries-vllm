@@ -20,6 +20,7 @@ Anything named XPU below (`VLLM_XPU_*` variables, `XpuCommunicator`, "XPU worker
 |---|---|---|---|---|---|
 | `qwen3.8-27b` | [Qwen/Qwen3.8-27B-FP8](https://huggingface.co/Qwen/Qwen3.8-27B-FP8) (+ MTP) | validated | 98K | ~1,200 tok/s | 33–36 tok/s |
 | `devstral-small-2-24b` | [mistralai/Devstral-Small-2-24B-Instruct-2512](https://huggingface.co/mistralai/Devstral-Small-2-24B-Instruct-2512) (FP8) | experimental (smoke + bench only) | 131K | ~1,900 tok/s | 31 → 27 tok/s (0 → 26K deep) |
+| `qwen3.5-9b` | [Qwen/Qwen3.5-9B](https://huggingface.co/Qwen/Qwen3.5-9B) (bf16) + MTP | experimental (smoke + bench only) | 262K | ~3,400 tok/s | 64–70 tok/s |
 | `gemma-4-26b-a4b` | [RedHatAI/gemma-4-26B-A4B-it-FP8-dynamic](https://huggingface.co/RedHatAI/gemma-4-26B-A4B-it-FP8-dynamic) | experimental (smoke + bench only) | 262K | 643 → 231 tok/s (0 → 26K deep) | 27 → 21 tok/s |
 
 One validated model so far. Other models vLLM supports on XPU should work with a new preset (see

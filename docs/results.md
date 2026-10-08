@@ -56,12 +56,22 @@ prefix caching, no speculative decoding, 2048 batched tokens). Native XPU kernel
 | chunked | — | **1894 / 1945 / 1765** | 31.3 / 29.4 / 26.6 | 31.2 / 1932 / 0.13 s | output read: clean. Decode step ~32 ms, of which ~26 ms is reading 12 GiB/card (estimate): near its bandwidth ceiling |
 | chunked | 131K context: `MAX_MODEL_LEN=131072`, `GPU_MEMORY_UTIL=0.95` (needed together: 131K needs ~10 GiB KV/card) | — | — | 31.2 / 1931 / 0.13 s | KV pool 137,792 tokens (10.52 GiB/card; one full-length request at a time). 116K-token prompt with a codename in its first line: recalled exactly; cold prefill 96 s (1209 tok/s avg), cached repeat 0.72 s. 262K would need fp8 KV, and the checkpoint has no KV scales |
 
+## Qwen3.5-9B bf16, TP=2
+
+Preset `models/qwen3.5-9b.env` (Qwen's bf16 checkpoint, same hybrid GDN architecture as Qwen3.8,
+MTP 2, prefix caching, 262K context, 2048 batched tokens). KV pool 586,889 tokens.
+
+| All-reduce | Config change | Cold prefill @0 / 8K / 26K | Decode @0 / 8K / 26K | Smoke: decode / prefill @15K / cached return | Notes |
+|---|---|---|---|---|---|
+| chunked | — | **3372 / 3488 / 3333** | **63.8 / 70.4 / 70.1** | 79–81 / 2729 / 0.63 s | output read: clean (IPv4 validator with tests). MTP acceptance ~94% (2.88 tokens/step) |
+
 ## Model comparison (TP=2, best config each, tok/s)
 
 | Model | Cold prefill @0 / 8K / 26K | Decode @0 / 8K / 26K | Max context | Notes |
 |---|---|---|---|---|
 | Qwen3.8-27B FP8 + MTP | 1164–1186 / 1211–1216 / 1162–1163 | 33.0–35.7 / 34.5–35.7 / 34.8–35.5 | 98K | MTP carries decode |
 | Devstral Small 2 24B FP8 | **1894 / 1945 / 1765** | 31.3 / 29.4 / 26.6 | 131K (393K native) | no speculative decoding; native kernels |
+| Qwen3.5-9B bf16 + MTP | 3372 / 3488 / 3333 | 63.8 / 70.4 / 70.1 | 262K | small model; MTP acceptance ~94% |
 | Gemma 4 26B A4B QAT INT4 | 2547 / 1271 / 529 | 26.0 / 25.9 / 25.7 | 262K | Triton attention fallback slows deep prefill |
 
 ## llama.cpp on the same hardware, for comparison
