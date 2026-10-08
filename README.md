@@ -19,8 +19,9 @@ Anything named XPU below (`VLLM_XPU_*` variables, `XpuCommunicator`, "XPU worker
 | Preset | Model | Status | Context | Cold prefill | Decode |
 |---|---|---|---|---|---|
 | `qwen3.8-27b` | [Qwen/Qwen3.8-27B-FP8](https://huggingface.co/Qwen/Qwen3.8-27B-FP8) (+ MTP) | validated | 98K | ~1,200 tok/s | 33–36 tok/s |
+| `gemma-4-26b-a4b` | [RedHatAI/gemma-4-26B-A4B-it-FP8-dynamic](https://huggingface.co/RedHatAI/gemma-4-26B-A4B-it-FP8-dynamic) | experimental (smoke + bench only) | 262K | 643 → 231 tok/s (0 → 26K deep) | 27 → 21 tok/s |
 
-One model so far. Other models vLLM supports on XPU should work with a new preset (see
+One validated model so far. Other models vLLM supports on XPU should work with a new preset (see
 [Adding a model](#adding-a-model)), but they are untested here. Full numbers, including a
 llama.cpp comparison on the same cards: [docs/results.md](docs/results.md).
 
@@ -249,8 +250,8 @@ anyway.
 - **Slow agent turns despite prefix caching**: agent tools that run side jobs (memory,
   summarizers) queue behind main turns on a single-user server. Point them at a smaller model.
 - `/metrics` and `/health` don't need the key; only `/v1/*` does.
-- llama-benchy's "cached" rows are full re-prefills on hybrid models; `make smoke` measures the
-  real cached return.
+- llama-benchy's "cached" rows were full re-prefills on both tested models; `make smoke` measures
+  the real cached return.
 
 ## Versioning
 

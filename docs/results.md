@@ -24,6 +24,21 @@ Preset `models/qwen3.8-27b.env` unless noted (MTP 2, auto KV, prefix caching, 20
 Without prefix caching (vLLM's default for hybrid models) the 15K cached return is a full
 re-prefill: ~41 s.
 
+## Gemma 4 26B A4B FP8, TP=2
+
+Preset `models/gemma-4-26b-a4b.env` (RedHatAI FP8-dynamic checkpoint, 262K context, prefix caching,
+no speculative decoding, 2048 batched tokens). MoE runs on vLLM's **Triton** FP8 kernels (the XPU
+FP8 MoE kernels don't take per-channel scales; no tuned MoE config for this GPU), attention on
+Triton (XPU Flash Attention doesn't support Gemma's prefix-LM attention). Weights 12.6 GiB/card,
+KV pool 651K tokens.
+
+| All-reduce | Config change | Cold prefill @0 / 8K / 26K | Decode @0 / 8K / 26K | Smoke: decode / prefill @17K / cached return | Notes |
+|---|---|---|---|---|---|
+| chunked | — | 643 / 420 / 231 | 27.0 / 25.9 / 20.8 | 26.8 / 324 / 0.25–0.96 s | output read: clean; prefill falls with depth (attention, likely the Triton fallback) |
+
+llama-benchy's "cached" rows re-prefilled here too (pp256 @ 8K ttfr 18.7 s), although this model
+isn't hybrid; the smoke cached return (same prompt resent) shows prefix caching works.
+
 ## llama.cpp on the same hardware, for comparison
 
 SYCL backend, layer split across both cards, Qwen3.8-27B UD-Q6_K_XL + MTP (n-max 3), q8_0 KV,

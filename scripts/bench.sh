@@ -13,5 +13,5 @@ COMMON=(--base-url "http://127.0.0.1:${PORT:-8080}/v1" --model "${SERVED_MODEL_N
   --save-result "results/$TS-$LABEL-cold.md"
 "$BENCHY" "${COMMON[@]}" --pp 256 --tg 64 --depth 8192 26624 --runs 3 \
   --save-result "results/$TS-$LABEL-cached.md"
-echo "Note: on hybrid models benchy's 'cached' rows are full re-prefills (recurrent-state"
-echo "checkpoints don't line up with its prompts). Use make smoke for the cached-return number."
+echo "Note: benchy's 'cached' rows have been full re-prefills on every model tested here."
+echo "Use make smoke for the cached-return number."
